@@ -28,6 +28,14 @@ def choosepaths():
 	else:
 		chooseclientpath()
 
+#Let's try this:
+#Check each folder in the folder list.
+#If it has a folder in it self, it's not a dead end so don't add it to the list.
+#Otherwise do.
+#Returns a list.
+def getdeadends():
+	pass
+
 #Make the folders for the files if they aren't there, since open() can't make subfolders.
 msg("Making file structure...")
 #Placeholder text, may or may not be overwritten.
