@@ -1,13 +1,30 @@
 #Imports
 from DPNVT import *
 from DPNGourmet import *
+import os
 
 #Variables
 CHfolder = ""
 outfolder = ""
+CHlist = []
+deadends = []
 
 #Constants
+herepath = os.path.dirname(os.path.abspath(__file__))
 
+#Make the users client-side song list.
+def makeFileList():
+	global CHlist
+	p = Path(CHfolder)
+	filelist = list(p.glob('**/*.*'))
+	filelist = [str(e) + '\n' for e in filelist]
+	for line in filelist:
+		newline = line.replace('\\', '/')
+		newline = newline.replace(CHfolder, '')
+		newline = newline.replace('\u200f', '')
+		CHlist.append(newline)
+	with open('clientfilelist.txt', 'w+', encoding="utf-8") as f:
+		f.writelines(CHlist)
 
 def convert(infile, outfile):
 	os.sys("cd .")
@@ -79,3 +96,5 @@ def makeFolderStruct():
 			except FileExistsError:
 				#Folder's already there. Don't gotta make it again.
 				pass
+
+#Main code.
