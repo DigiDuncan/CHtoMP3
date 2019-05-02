@@ -15,7 +15,7 @@ def choosepaths():
 	outfolder = input("Please type the full path of your output directory.\n>")
 	outfolder = outfolder.replace("\\", "/")
 	if infolder == "test": infolder = "C:/chs/02 Official RB Games/1 Rock Band 1/Rock Band 1 Base Game/Tier 1 [RB1]/01.1 OK Go - Here It Goes Again"
-	if outfolder == "test": outfolder = "C:/Users/digid/Desktop"
+	if outfolder == "test": outfolder = "C:/Users/DigiDuncan/Desktop"
 	confirm = input("Input folder: {0}\nOutput folder: {1}\nAre you sure about this? Type \"Y\" or \"N\".\n>".format(infolder, outfolder))
 	if confirm.lower() == 'y':
 		return
@@ -45,8 +45,8 @@ def convert(infolder, outfile):
 		newline = newline.rpartition('/')[2]
 		newline = newline.replace('\u200f', '')
 		badsoundlist.append(newline)
-	if "crowd.ogg" in badsoundlist:
-		badsoundlist.remove("crowd.ogg")
+	if "crowd.ogg\n" in badsoundlist:
+		badsoundlist.remove("crowd.ogg\n")
 
 	print(f"badsoundlist: {badsoundlist}")
 
@@ -65,14 +65,14 @@ def convert(infolder, outfile):
 	print(f"howmany: {howmany}")
 
 	#Create the command.
-	command = "ffmpeg"
+	command = "ffmpeg -hide_banner -loglevel quiet" #Execute ffmpeg without output on screen.
 	for soundfile in soundlist:
 		command += f" -i \"{infolder + '/' + soundfile}\"" #Add all the sound files as inputs.
 	command += f" -filter_complex \"amix=inputs={howmany}\"" #Mix it all together and you know that it's the best of {howmany} worlds!
 	command += f" \"{badoutfile}\"" #Output the mixed recording to the output file.
-	command += f" && ffmpeg -i \"{badoutfile}\"" #But the output file needs to be filtered again...
+	command += f" && ffmpeg -hide_banner -loglevel quiet -i \"{badoutfile}\"" #But the output file needs to be filtered again...
 	command += f" -filter_complex volume={howmany}.0" #...because the result is 1/{howmany}th the volume it should be.
-	command += f" \"{outfile}\"" #Overwrite the old output with the new, louder one.
+	command += f" \"{outfile}\"" #Replace the old output with the new, louder one.
 
 	print(f"command: {command}")
 
@@ -81,7 +81,7 @@ def convert(infolder, outfile):
 	os.system(command)
 
 	#Delete the bad file.
-	if os.path.exists(badoutfile): os.remove(badoutfile)
+	if os.path.exists(badoutfile): os.remove(badoutfile) #Get rid of the quiet version of the output.
 
 #Main program.
 choosepaths()
