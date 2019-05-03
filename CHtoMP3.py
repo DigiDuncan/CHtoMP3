@@ -25,8 +25,8 @@ def choosepaths():
 	destfolder = destfolder.replace("/", "\\")
 	if CHfolder == "test": CHfolder = "F:\\chs"
 	if destfolder == "test": destfolder = "F:\\CHtoMP3 Songs"
-		if CHfolder == "test2": CHfolder = "C:\\chs"
-		if destfolder == "test2": destfolder = "C:\\CHtoMP3 Songs"
+	if CHfolder == "test2": CHfolder = "C:\\chs"
+	if destfolder == "test2": destfolder = "C:\\CHtoMP3 Songs"
 	confirm = input("Input folder: {0}\nOutput folder: {1}\nAre you sure about this? Type \"Y\" or \"N\".\n>".format(CHfolder, destfolder))
 	if confirm.lower() == 'y':
 		Path(CHfolder)
@@ -110,7 +110,7 @@ def makeFileList():
 	printlist = []
 	global CHlist
 	p = Path(CHfolder)
-	filelist = list(p.glob('**/*.*'))
+	filelist = list(p.glob('**/*'))
 	for line in filelist:
 		if os.path.isdir(line):
 			newline = os.path.relpath(line, CHfolder)
