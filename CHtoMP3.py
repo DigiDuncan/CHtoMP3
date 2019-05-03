@@ -20,13 +20,15 @@ def choosepaths():
 	global CHfolder
 	global destfolder
 	CHfolder = input("Please type the full path of your input directory.\n>")
-	CHfolder = CHfolder.replace("\\", "/")
+	CHfolder = CHfolder.replace("/", "\\")
 	destfolder = input("Please type the full path of your output directory.\n>")
-	destfolder = destfolder.replace("\\", "/")
-	if CHfolder == "test": CHfolder = "F:/chs"
-	if destfolder == "test": destfolder = "F:/CHtoMP3 Songs"
+	destfolder = destfolder.replace("/", "\\")
+	if CHfolder == "test": CHfolder = "F:\\chs"
+	if destfolder == "test": destfolder = "F:\\CHtoMP3 Songs"
 	confirm = input("Input folder: {0}\nOutput folder: {1}\nAre you sure about this? Type \"Y\" or \"N\".\n>".format(CHfolder, destfolder))
 	if confirm.lower() == 'y':
+		Path(CHfolder)
+		Path(destfolder)
 		return
 	else:
 		choosepaths()
@@ -37,14 +39,15 @@ def convert(relfolder):
 	global herepath
 
 	#Setup in and out destinations.
-	infolder = CHfolder + relfolder
-	outfolder = destfolder + relfolder
+	infolder = os.path.join(CHfolder, relfolder)
+	outfolder = os.path.join(destfolder, relfolder)
 	outfolder = os.path.split(outfolder)[0]
 
 	#Name the outfile.
-	outfile = outfolder + "/" + infolder.rpartition('/')[2] + ".mp3"
-	badoutfile = outfolder + "/" + infolder.rpartition('/')[2] + "BAD.mp3"
+	outfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + ".mp3"))
+	badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
 	print(f"""OUTFILE CALC:
+	relfolder = {relfolder}
 	outfolder = {outfolder}
 	infolder = {infolder}
 	infolder.rparttion('/')[2] = {infolder.rpartition('/')[2]}
@@ -105,12 +108,9 @@ def makeFileList():
 	global CHlist
 	p = Path(CHfolder)
 	filelist = list(p.glob('**/*.*'))
-	filelist = [str(e) + '\n' for e in filelist]
 	for line in filelist:
-		if os.path.isdir(line.strip()):
-			newline = line.replace('\\', '/')
-			newline = newline.replace(CHfolder, '')
-			newline = newline.replace('\u200f', '')
+		if os.path.isdir(line):
+			newline = os.path.relpath(line, CHfolder)
 			CHlist.append(newline)
 	with open('clientfolderlist.txt', 'w+', encoding="utf-8") as f:
 		f.writelines(CHlist)
@@ -126,11 +126,10 @@ def getdeadends():
 #Make the folders for the files if they aren't there, since open() can't make subfolders.
 def makeFolderStruct():
 	global destfolder
-	for item in CHlist:
-		folder = item.strip()
+	for folder in CHlist:
 		folder = os.path.split(folder)[0]
 		try:
-			os.makedirs(destfolder + folder)
+			os.makedirs(os.path.join(destfolder, folder))
 		except FileExistsError:
 			#Folder's already there. Don't gotta make it again.
 			pass
@@ -138,7 +137,10 @@ def makeFolderStruct():
 #Main code.
 choosepaths()
 print(herepath)
+print("Making file list.")
 makeFileList()
+print("Making folders.")
 makeFolderStruct()
+print("Begin conversion.")
 for item in CHlist:
-	convert(item.strip())
+	convert(item)
