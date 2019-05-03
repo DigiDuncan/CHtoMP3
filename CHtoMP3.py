@@ -25,6 +25,8 @@ def choosepaths():
 	destfolder = destfolder.replace("/", "\\")
 	if CHfolder == "test": CHfolder = "F:\\chs"
 	if destfolder == "test": destfolder = "F:\\CHtoMP3 Songs"
+		if CHfolder == "test2": CHfolder = "C:\\chs"
+		if destfolder == "test2": destfolder = "C:\\CHtoMP3 Songs"
 	confirm = input("Input folder: {0}\nOutput folder: {1}\nAre you sure about this? Type \"Y\" or \"N\".\n>".format(CHfolder, destfolder))
 	if confirm.lower() == 'y':
 		Path(CHfolder)
@@ -105,6 +107,7 @@ def convert(relfolder):
 
 #Make the users client-side song list.
 def makeFileList():
+	printlist = []
 	global CHlist
 	p = Path(CHfolder)
 	filelist = list(p.glob('**/*.*'))
@@ -112,8 +115,10 @@ def makeFileList():
 		if os.path.isdir(line):
 			newline = os.path.relpath(line, CHfolder)
 			CHlist.append(newline)
+	for line in CHlist:
+		printlist.append(line + "\n")
 	with open('clientfolderlist.txt', 'w+', encoding="utf-8") as f:
-		f.writelines(CHlist)
+		f.writelines(printlist)
 
 #Let's try this:
 #Check each folder in the folder list.
