@@ -47,11 +47,14 @@ def convert(relfolder):
 	#Setup in and out destinations.
 	infolder = os.path.join(CHfolder, relfolder)
 	outfolder = os.path.join(destfolder, relfolder)
-	outfolder = os.path.split(outfolder)[0]
+	outfolder = os.path.split(outfolder)[0] #Go one folder up.
 
 	#Name the outfile.
 	outfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + ".mp3"))
 	badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
+
+	#Temp output.
+	print(f"Converting \"{infolder}\" to \"{outfile}\".")
 
 	#Create the soundlist.
 	badsoundlist = []
@@ -61,10 +64,10 @@ def convert(relfolder):
 	for line in filelist:
 		newline = line.replace('\\', '/')
 		newline = newline.rpartition('/')[2]
-		newline = newline.replace('\u200f', '')
+		#newline = newline.replace('\u200f', '') #Is this important?
 		badsoundlist.append(newline)
 	if "crowd.ogg\n" in badsoundlist:
-		badsoundlist.remove("crowd.ogg\n")
+		badsoundlist.remove("crowd.ogg\n") #F*** crowd noise.
 
 	#Remove all files that aren't sound files.
 	soundlist = []
