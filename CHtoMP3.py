@@ -15,6 +15,10 @@ deadends = []
 #Constants
 herepath = os.path.dirname(os.path.abspath(__file__))
 
+#Remove prefix function.
+def remove_prefix(s, prefix):
+    return s[len(prefix):] if s.startswith(prefix) else s
+
 #Setup functions
 def choosepaths():
 	global CHfolder
@@ -48,13 +52,6 @@ def convert(relfolder):
 	#Name the outfile.
 	outfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + ".mp3"))
 	badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
-	print(f"""OUTFILE CALC:
-	relfolder = {relfolder}
-	outfolder = {outfolder}
-	infolder = {infolder}
-	infolder.rparttion('/')[2] = {infolder.rpartition('/')[2]}
-	outfile = {outfile}
-	badoutfile = {badoutfile}""")
 
 	#Create the soundlist.
 	badsoundlist = []
@@ -69,21 +66,37 @@ def convert(relfolder):
 	if "crowd.ogg\n" in badsoundlist:
 		badsoundlist.remove("crowd.ogg\n")
 
-	print(f"badsoundlist: {badsoundlist}")
-
 	#Remove all files that aren't sound files.
 	soundlist = []
 	for item in badsoundlist:
 		if item.strip()[-3:] == "ogg" or item.strip()[-3:] == "wav" or item.strip()[-3:] == "mp3":
 			soundlist.append(item.strip())
 
-	print(f"soundlist: {soundlist}")
-
 	#How many items are in the list?
 	howmany = len(soundlist)
 	howmany = str(howmany)
 
-	print(f"howmany: {howmany}")
+	#Set default value for metadata.
+	title = "Unknown Title"
+	author = "Unknown Artist"
+	album_artist = "Unknown Artist"
+	album = "Unknown Album"
+	year = ""
+	genre = "Unknown Genre"
+	comment = "charted by Unknown Charter"
+	composer = "Unknown Charter"
+
+	#Get metadata from .ini.
+	ini = open(f"{infolder}\\song.ini", "r")
+	for line in ini:
+		if line.startswith("name"): title = remove_prefix(line, "name=")
+		if line.startswith("artist"): author = remove_prefix(line, "artist=")
+		if line.startswith("artist"): album_artist = remove_prefix(line, "artist=")
+		if line.startswith("album"): album = remove_prefix(line, "album=")
+		if line.startswith("year"): year = remove_prefix(line, "year=")
+		if line.startswith("genre"): genre = remove_prefix(line, "genre=")
+		if line.startswith("charter"): comment = "charted by " + remove_prefix(line, "charter=")
+		if line.startswith("charter"): composer = remove_prefix(line, "charter=")
 
 	#Create the command.
 	command = "ffmpeg -hide_banner -loglevel quiet" #Execute ffmpeg without output on screen.
@@ -93,9 +106,15 @@ def convert(relfolder):
 	command += f" \"{badoutfile}\"" #Output the mixed recording to the output file.
 	command += f" && ffmpeg -hide_banner -loglevel quiet -i \"{badoutfile}\"" #But the output file needs to be filtered again...
 	command += f" -filter_complex volume={howmany}.0" #...because the result is 1/{howmany}th the volume it should be.
-	command += f" \"{outfile}\"" #Replace the old output with the new, louder one.
-
-	print(f"command: {command}")
+	command += (f" -metadata title={title}"
+				f" -metadata author={author}"
+				f" -metadata album_artist={album_artist}"
+				f" -metadata album={album}"
+				f" -metadata year={year}"
+				f" -metadata genre={genre}"
+				f" -metadata comment={comment}"
+				f" -metadata composer={composer}") #Assign metadata tags.
+	command += f" \"{outfile}\"" #Replace the old output with the new, louder, tagged one.
 
 	#Execute the command.
 	os.system(f"cd {herepath}")
