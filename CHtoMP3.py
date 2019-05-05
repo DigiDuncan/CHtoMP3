@@ -146,9 +146,18 @@ def makeFileList():
 #Check each folder in the folder list.
 #If it has a folder in it self, it's not a dead end so don't add it to the list.
 #Otherwise do.
-#Returns a list.
 def getdeadends():
-	pass
+	global deadends
+	for folder in CHlist:
+		p = Path(folder)
+		sublist = p.glob('**/*')
+		deadendbool = True
+		for item in sublist:
+			if item.is_dir():
+				deadendbool = False
+				break
+		if deadendbool == True: deadends.append(folder)
+
 
 #Make the folders for the files if they aren't there, since open() can't make subfolders.
 def makeFolderStruct():
@@ -169,5 +178,5 @@ makeFileList()
 print("Making folders.")
 makeFolderStruct()
 print("Begin conversion.")
-for item in CHlist:
+for item in deadends:
 	convert(item)
