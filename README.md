@@ -9,3 +9,7 @@ Turns a Clone Hero "Songs" library into a listenable, navigatable music library.
 * No dependancies other than Python 3.7 installed.
 * ~~A nice looking sonsole user interface.~~ (planned.)
 * Completely open source!
+
+Play **Clone Hero** here: https://clonehero.net/
+
+***I am not associated with Clone Hero, or the artists used for custom song charts, in any way. This program, and custom song charts in general, are of dubious legality, but let's be real, the FBI has bigger fish to fry.***
