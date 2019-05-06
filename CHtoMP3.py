@@ -130,7 +130,7 @@ composer = {composer}""")
 	subprocess.run(command2)
 
 	#Delete the bad file.
-	#if os.path.exists(badoutfile): os.remove(badoutfile) #Get rid of the quiet version of the output.
+	if os.path.exists(badoutfile): os.remove(badoutfile) #Get rid of the quiet version of the output.
 
 #Make the users client-side song list.
 def makeFileList():
