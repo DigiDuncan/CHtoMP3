@@ -10,7 +10,6 @@ import re
 CHfolder = ""
 destfolder = ""
 CHlist = []
-deadends = []
 
 #Constants
 herepath = os.path.dirname(os.path.abspath(__file__))
@@ -40,9 +39,6 @@ def choosepaths():
 		choosepaths()
 
 def convert(relfolder):
-	global CHfolder
-	global destfolder
-	global herepath
 
 	#Setup in and out destinations.
 	infolder = os.path.join(CHfolder, relfolder)
@@ -130,7 +126,7 @@ def convert(relfolder):
 #Make the users client-side song list.
 def makeFileList():
 	printlist = []
-	global CHlist
+	CHlist = []
 	p = Path(CHfolder)
 	filelist = list(p.glob('**/*'))
 	for line in filelist:
@@ -141,13 +137,14 @@ def makeFileList():
 		printlist.append(line + "\n")
 	with open('clientfolderlist.txt', 'w+', encoding="utf-8") as f:
 		f.writelines(printlist)
+	return CHlist
 
 #Let's try this:
 #Check each folder in the folder list.
 #If it has a folder in it self, it's not a dead end so don't add it to the list.
 #Otherwise do.
 def getdeadends():
-	global deadends
+	deadends = []
 	for folder in CHlist:
 		p = Path(folder)
 		sublist = p.glob('**/*')
@@ -157,11 +154,11 @@ def getdeadends():
 				deadendbool = False
 				break
 		if deadendbool == True: deadends.append(folder)
+	return deadends
 
 
 #Make the folders for the files if they aren't there, since open() can't make subfolders.
 def makeFolderStruct():
-	global destfolder
 	for folder in CHlist:
 		folder = os.path.split(folder)[0]
 		try:
@@ -174,9 +171,9 @@ def makeFolderStruct():
 choosepaths()
 print(herepath)
 print("Making file list.")
-makeFileList()
+CHlist = makeFileList()
 print("Making folders.")
 makeFolderStruct()
 print("Begin conversion.")
-for item in deadends:
+for item in deadends():
 	convert(item)
