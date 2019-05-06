@@ -5,12 +5,6 @@ import os
 from pathlib import Path
 import re
 
-
-#Variables
-CHfolder = ""
-destfolder = ""
-CHlist = []
-
 #Constants
 herepath = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,8 +14,8 @@ def remove_prefix(s, prefix):
 
 #Setup functions
 def choosepaths():
-	global CHfolder
-	global destfolder
+	CHfolder = ""
+	destfolder = ""
 	CHfolder = input("Please type the full path of your input directory.\n>")
 	CHfolder = CHfolder.replace("/", "\\")
 	destfolder = input("Please type the full path of your output directory.\n>")
@@ -32,13 +26,14 @@ def choosepaths():
 	if destfolder == "test2": destfolder = "C:\\CHtoMP3 Songs"
 	confirm = input("Input folder: {0}\nOutput folder: {1}\nAre you sure about this? Type \"Y\" or \"N\".\n>".format(CHfolder, destfolder))
 	if confirm.lower() == 'y':
-		Path(CHfolder)
-		Path(destfolder)
-		return
+		CHfolder = Path(CHfolder)
+		destfolder = Path(destfolder)
+		return CHfolder, destfolder
 	else:
-		choosepaths()
+		return choosepaths()
 
 def convert(relfolder):
+	print(f"Converting {relfolder}...")
 
 	#Setup in and out destinations.
 	infolder = os.path.join(CHfolder, relfolder)
@@ -143,7 +138,7 @@ def makeFileList():
 #Check each folder in the folder list.
 #If it has a folder in it self, it's not a dead end so don't add it to the list.
 #Otherwise do.
-def getdeadends():
+def getdeadends(CHlist):
 	deadends = []
 	for folder in CHlist:
 		p = Path(folder)
@@ -168,12 +163,11 @@ def makeFolderStruct():
 			pass
 
 #Main code.
-choosepaths()
-print(herepath)
+CHfolder, destfolder = choosepaths()
 print("Making file list.")
 CHlist = makeFileList()
 print("Making folders.")
 makeFolderStruct()
 print("Begin conversion.")
-for item in deadends():
+for item in getdeadends(CHlist):
 	convert(item)
