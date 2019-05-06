@@ -4,13 +4,22 @@ from DPNGourmet import *
 import os
 from pathlib import Path
 import re
+import subprocess
+import configparser
 
 #Constants
 herepath = os.path.dirname(os.path.abspath(__file__))
 
 #Remove prefix function.
 def remove_prefix(s, prefix):
-    return s[len(prefix):] if s.startswith(prefix) else s
+	 if s.startswith(prefix):
+		 return s[len(prefix):].strip()
+	 else:
+		 return s.strip()
+
+def insert_section(file):
+    yield "[CH]\n"
+    yield from file
 
 #Setup functions
 def choosepaths():
@@ -33,8 +42,6 @@ def choosepaths():
 		return choosepaths()
 
 def convert(relfolder):
-	print(f"Converting {relfolder}...")
-
 	#Setup in and out destinations.
 	infolder = os.path.join(CHfolder, relfolder)
 	outfolder = os.path.join(destfolder, relfolder)
@@ -70,53 +77,60 @@ def convert(relfolder):
 	howmany = len(soundlist)
 	howmany = str(howmany)
 
-	#Set default value for metadata.
-	title = "Unknown Title"
-	author = "Unknown Artist"
-	album_artist = "Unknown Artist"
-	album = "Unknown Album"
-	year = ""
-	genre = "Unknown Genre"
-	comment = "charted by Unknown Charter"
-	composer = "Unknown Charter"
+	#Make a config parser.
+	config = configparser.ConfigParser()
 
 	#Get metadata from .ini.
-	ini = open(f"{infolder}\\song.ini", "r")
-	for line in ini:
-		if line.startswith("name"): title = remove_prefix(line, "name=")
-		if line.startswith("artist"): author = remove_prefix(line, "artist=")
-		if line.startswith("artist"): album_artist = remove_prefix(line, "artist=")
-		if line.startswith("album"): album = remove_prefix(line, "album=")
-		if line.startswith("year"): year = remove_prefix(line, "year=")
-		if line.startswith("genre"): genre = remove_prefix(line, "genre=")
-		if line.startswith("charter"): comment = "charted by " + remove_prefix(line, "charter=")
-		if line.startswith("charter"): composer = remove_prefix(line, "charter=")
+	with open(f"{infolder}\\song.ini") as ini:
+		config.read_file(ini)
+	songini = config["song"]
+	title = songini.get("name", "Unknown Title")
+	author = album_artist = songini.get("artist", "Unknown Artist")
+	album = songini.get("album", "Unknown Album")
+	year = songini.get("year", "")
+	genre = songini.get("genre", "Unknown Genre")
+	comment = songini.get("charter", "Unknown Charter")
+	comment = "charted by " + comment
+	composer = songini.get("charter", "Unknown Charter")
 
-	#Create the command.
-	command = "ffmpeg -hide_banner -loglevel quiet" #Execute ffmpeg without output on screen.
+	print(f"""title = {title}
+author = {author}
+album_artist = {album_artist}
+year = {year}
+genre = {genre}
+comment = {comment}
+composer = {composer}""")
+
+	#Create the commands.
+	command = "ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet" #Execute ffmpeg.
 	for soundfile in soundlist:
-		command += f" -i \"{infolder + '/' + soundfile}\"" #Add all the sound files as inputs.
+		command += f" -i \"{infolder}\\{soundfile}\"" #Add all the sound files as inputs.
 	command += f" -filter_complex \"amix=inputs={howmany}\"" #Mix it all together and you know that it's the best of {howmany} worlds!
 	command += f" \"{badoutfile}\"" #Output the mixed recording to the output file.
-	command += f" && ffmpeg -hide_banner -loglevel quiet -i \"{badoutfile}\"" #But the output file needs to be filtered again...
-	command += f" -filter_complex volume={howmany}.0" #...because the result is 1/{howmany}th the volume it should be.
-	command += (f" -metadata title={title}"
-				f" -metadata author={author}"
-				f" -metadata album_artist={album_artist}"
-				f" -metadata album={album}"
-				f" -metadata year={year}"
-				f" -metadata genre={genre}"
-				f" -metadata comment={comment}"
-				f" -metadata composer={composer}") #Assign metadata tags.
-	command += f" \"{outfile}\"" #Replace the old output with the new, louder, tagged one.
+
+	command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\"" #But the output file needs to be filtered again...
+	command2 += f" -filter_complex volume={howmany}.0" #...because the result is 1/{howmany}th the volume it should be.
+	command2 += f" -metadata title=\"{title}\""
+	command2 += f" -metadata author=\"{author}\""
+	command2 += f" -metadata artist=\"{author}\""
+	command2 += f" -metadata album_artist=\"{album_artist}\""
+	command2 += f" -metadata album=\"{album}\""
+	command2 += f" -metadata year=\"{year}\""
+	command2 += f" -metadata genre=\"{genre}\""
+	command2 += f" -metadata comment=\"{comment}\""
+	command2 += f" -metadata composer=\"{composer}\"" #Assign metadata tags.
+	command2 += f" \"{outfile}\"" #Replace the old output with the new, louder, tagged one.
 
 	#Execute the command.
-	os.system(f"cd {herepath}")
-	os.system("cd ffmpeg/bin")
-	os.system(command)
+	#subprocess.run(f"cd {herepath}")
+	#subprocess.run("cd ffmpeg/bin")
+	print(command)
+	subprocess.run(command)
+	print(command2)
+	subprocess.run(command2)
 
 	#Delete the bad file.
-	if os.path.exists(badoutfile): os.remove(badoutfile) #Get rid of the quiet version of the output.
+	#if os.path.exists(badoutfile): os.remove(badoutfile) #Get rid of the quiet version of the output.
 
 #Make the users client-side song list.
 def makeFileList():
@@ -139,16 +153,23 @@ def makeFileList():
 #If it has a folder in it self, it's not a dead end so don't add it to the list.
 #Otherwise do.
 def getdeadends(CHlist):
+	printdeadends = []
 	deadends = []
 	for folder in CHlist:
-		p = Path(folder)
-		sublist = p.glob('**/*')
+		p = Path(os.path.join(CHfolder, folder))
+		sublist = p.iterdir()
 		deadendbool = True
 		for item in sublist:
 			if item.is_dir():
 				deadendbool = False
 				break
 		if deadendbool == True: deadends.append(folder)
+	deadends.remove("Game Icons (Dont Put In Songs)")
+	deadends.remove("Highways (Dont Put In Songs)")
+	for line in deadends:
+		printdeadends.append(line + "\n")
+	with open('clientdeadends.txt', 'w+', encoding="utf-8") as f:
+		f.writelines(printdeadends)
 	return deadends
 
 

@@ -1,2 +1,0 @@
-python converttest.py
-pause
