@@ -1,3 +1,3 @@
 @echo OFF
-python CHtoMP3.py
+py CHtoMP3.py
 pause
