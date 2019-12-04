@@ -1,14 +1,31 @@
 #Imports
-from DPNVT import *
-from DPNGourmet import *
 import os
 from pathlib import Path
 import re
 import subprocess
 import configparser
+import digiformatter as df
 
 #Constants
 herepath = os.path.dirname(os.path.abspath(__file__))
+
+def iniparse(ini, key, default):
+    regex = "(.*)\s*=\s*(.*)"
+    returnstring = default
+    file = open(ini, 'r')
+    lines = file.readlines()
+    print(lines)
+    for line in lines:
+        print(line.strip())
+        if line.startswith(key):
+            search = re.search(regex, line)
+            if search:
+                returnstring = search.group(2)
+                df.warn(f"Found {key}: \"{returnstring}\"")
+                return returnstring
+
+    return returnstring
+
 
 #Remove prefix function.
 def remove_prefix(s, prefix):
@@ -16,10 +33,6 @@ def remove_prefix(s, prefix):
          return s[len(prefix):].strip()
      else:
          return s.strip()
-
-def insert_section(file):
-    yield "[CH]\n"
-    yield from file
 
 #Setup functions
 def choosepaths():
@@ -31,8 +44,6 @@ def choosepaths():
     destfolder = destfolder.replace("/", "\\")
     if CHfolder == "test": CHfolder = "F:\\chs"
     if destfolder == "test": destfolder = "F:\\CHtoMP3 Songs"
-    if CHfolder == "test2": CHfolder = "C:\\chs"
-    if destfolder == "test2": destfolder = "C:\\CHtoMP3 Songs"
     confirm = input(f"Input folder: {CHfolder}\nOutput folder: {destfolder}\nAre you sure about this? Type \"Y\" or \"N\".\n>")
     if confirm.lower() == 'y':
         CHfolder = Path(CHfolder)
@@ -44,6 +55,7 @@ def choosepaths():
 def convert(relfolder):
     #Setup in and out destinations.
     infolder = os.path.join(CHfolder, relfolder)
+    albumart = os.path.join(infolder, "album.png")
     outfolder = os.path.join(destfolder, relfolder)
     outfolder = os.path.split(outfolder)[0] #Go one folder up.
 
@@ -52,7 +64,7 @@ def convert(relfolder):
     badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
 
     #Temp output.
-    print(f"Converting \"{infolder}\" to \"{outfile}\".")
+    df.msg(f"Converting \"{infolder}\" to \"{outfile}\".")
 
     #Create the soundlist.
     badsoundlist = []
@@ -81,25 +93,23 @@ def convert(relfolder):
     config = configparser.ConfigParser()
 
     #Get metadata from .ini.
-    with open(f"{infolder}\\song.ini") as ini:
-        config.read_file(ini)
-    songini = config["song"]
-    title = songini.get("name", "Unknown Title")
-    author = album_artist = songini.get("artist", "Unknown Artist")
-    album = songini.get("album", "Unknown Album")
-    year = songini.get("year", "")
-    genre = songini.get("genre", "Unknown Genre")
-    comment = songini.get("charter", "Unknown Charter")
-    comment = "charted by " + comment
-    composer = songini.get("charter", "Unknown Charter")
+    ini = f"{infolder}\\song.ini"
 
-    print(f"""title = {title}
-author = {author}
-album_artist = {album_artist}
-year = {year}
-genre = {genre}
-comment = {comment}
-composer = {composer}""")
+    title = iniparse(ini, "name", "Unknown Title")
+    author = album_artist = iniparse(ini, "artist", "Unknown Artist")
+    album = iniparse(ini, "album", "Unknown Album")
+    year = iniparse(ini, "year", "")
+    genre = iniparse(ini, "genre", "Unknown Genre")
+    publisher = iniparse(ini, "charter", "Unknown Charter")
+    composer = iniparse(ini, "charter", "Unknown Charter")
+
+    #print(f"""title = {title}
+#author = {author}
+#album_artist = {album_artist}
+#year = {year}
+#genre = {genre}
+#comment = {comment}
+#composer = {composer}""")
 
     #Create the commands.
     command = "ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet" #Execute ffmpeg.
@@ -109,22 +119,24 @@ composer = {composer}""")
     command += f" \"{badoutfile}\"" #Output the mixed recording to the output file.
 
     command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\"" #But the output file needs to be filtered again...
+    command2 += f" -i {albumart}"
+    command2 += " -c:a copy -c:v copy -map 0:0 -map 1:0" #Map the inputs.
     command2 += f" -filter_complex volume={howmany}.0" #...because the result is 1/{howmany}th the volume it should be.
-    command2 += f" -metadata title=\"{title}\""
+    command2 += "-id3v2_version 3 -write_id3v1 1" #Set metadata version.
+    command2 += f" -metadata title=\"{title}\"" #Assign metadata tags.
     command2 += f" -metadata author=\"{author}\""
     command2 += f" -metadata artist=\"{author}\""
     command2 += f" -metadata album_artist=\"{album_artist}\""
     command2 += f" -metadata album=\"{album}\""
-    command2 += f" -metadata year=\"{year}\""
+    command2 += f" -metadata date=\"{year}\""
     command2 += f" -metadata genre=\"{genre}\""
-    command2 += f" -metadata comment=\"{comment}\""
-    command2 += f" -metadata composer=\"{composer}\"" #Assign metadata tags.
+    command2 += f" -metadata publisher=\"{publisher}\""
+    command2 += f" -metadata composer=\"{composer}\""
+    command2 += " -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\"" #Set the album art.
     command2 += f" \"{outfile}\"" #Replace the old output with the new, louder, tagged one.
 
     #Execute the command.
-    #subprocess.run(f"cd {herepath}")
-    #subprocess.run("cd ffmpeg/bin")
-    print(command)
+    #print(command)
     subprocess.run(command)
     print(command2)
     subprocess.run(command2)
@@ -185,9 +197,9 @@ def makeFolderStruct():
 
 #Main code.
 CHfolder, destfolder = choosepaths()
-print("Making file list.")
+df.msg("Making file list...")
 CHlist = makeFileList()
-print("Making folders.")
+df.msg("Making folders...")
 makeFolderStruct()
 print("Begin conversion.")
 for item in getdeadends(CHlist):
