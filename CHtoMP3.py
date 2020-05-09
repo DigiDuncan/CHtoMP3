@@ -67,7 +67,7 @@ def convert(relfolder):
     badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
 
     # Temp output.
-    df.msg(f"Converting \"{infolder}\" to \"{outfile}\".")
+    # df.msg(f"Converting \"{infolder}\" to \"{outfile}\".")
 
     # Create the soundlist.
     badsoundlist = []
