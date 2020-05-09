@@ -182,8 +182,6 @@ def getdeadends(CHlist):
                 break
         if deadendbool is True:
             deadends.append(folder)
-    deadends.remove("Game Icons (Dont Put In Songs)")
-    deadends.remove("Highways (Dont Put In Songs)")
     for line in deadends:
         printdeadends.append(line + "\n")
     with open('clientdeadends.txt', 'w+', encoding="utf-8") as f:
