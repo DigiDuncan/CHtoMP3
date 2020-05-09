@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from unidecode import unidecode
 
 import digiformatter as df
 
@@ -10,20 +11,20 @@ import digiformatter as df
 herepath = os.path.dirname(os.path.abspath(__file__))
 
 
-def iniparse(ini, key, default):
-    regex = r"(.*)\s*=\s*(.*)"
-    returnstring = default
-    file = open(ini, 'r')
-    lines = file.readlines()
-    for line in lines:
-        if line.startswith(key):
-            search = re.search(regex, line)
-            if search:
-                returnstring = search.group(2)
-                # df.warn(f"Found {key}: \"{returnstring}\"")
-                return returnstring
-
-    return returnstring
+def iniparse(ini, key, default=None):
+    regex = re.compile(r"^([^\s=]+)\s*=\s*(.+)$")
+    tag_regex = re.compile(r"<[^>]*>")
+    with open(ini, "r", encoding = "utf=8") as f:
+        for line in f:
+            match = regex.match(line.strip())
+            if not match:
+                continue
+            linekey, value = match.groups()
+            if key != linekey:
+                continue
+            value = tag_regex.sub("", value)
+            return unidecode(value)
+    return default
 
 
 # Remove prefix function.
