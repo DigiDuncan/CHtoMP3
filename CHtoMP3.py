@@ -1,16 +1,17 @@
-#Imports
+# Imports
 import os
-from pathlib import Path
 import re
 import subprocess
-import configparser
+from pathlib import Path
+
 import digiformatter as df
 
-#Constants
+# Constants
 herepath = os.path.dirname(os.path.abspath(__file__))
 
+
 def iniparse(ini, key, default):
-    regex = "(.*)\s*=\s*(.*)"
+    regex = r"(.*)\s*=\s*(.*)"
     returnstring = default
     file = open(ini, 'r')
     lines = file.readlines()
@@ -27,14 +28,15 @@ def iniparse(ini, key, default):
     return returnstring
 
 
-#Remove prefix function.
+# Remove prefix function.
 def remove_prefix(s, prefix):
-     if s.startswith(prefix):
-         return s[len(prefix):].strip()
-     else:
-         return s.strip()
+    if s.startswith(prefix):
+        return s[len(prefix):].strip()
+    else:
+        return s.strip()
 
-#Setup functions
+
+# Setup functions
 def choosepaths():
     CHfolder = ""
     destfolder = ""
@@ -42,8 +44,10 @@ def choosepaths():
     CHfolder = CHfolder.replace("/", "\\")
     destfolder = input("Please type the full path of your output directory.\n>")
     destfolder = destfolder.replace("/", "\\")
-    if CHfolder == "test": CHfolder = "F:\\chs"
-    if destfolder == "test": destfolder = "F:\\CHtoMP3 Songs"
+    if CHfolder == "test":
+        CHfolder = "F:\\chs"
+    if destfolder == "test":
+        destfolder = "F:\\CHtoMP3 Songs"
     confirm = input(f"Input folder: {CHfolder}\nOutput folder: {destfolder}\nAre you sure about this? Type \"Y\" or \"N\".\n>")
     if confirm.lower() == 'y':
         CHfolder = Path(CHfolder)
@@ -52,21 +56,22 @@ def choosepaths():
     else:
         return choosepaths()
 
+
 def convert(relfolder):
-    #Setup in and out destinations.
+    # Setup in and out destinations.
     infolder = os.path.join(CHfolder, relfolder)
     albumart = os.path.join(infolder, "album.png")
     outfolder = os.path.join(destfolder, relfolder)
-    outfolder = os.path.split(outfolder)[0] #Go one folder up.
+    outfolder = os.path.split(outfolder)[0]  # Go one folder up.
 
-    #Name the outfile.
+    # Name the outfile.
     outfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + ".mp3"))
     badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
 
-    #Temp output.
+    # Temp output.
     df.msg(f"Converting \"{infolder}\" to \"{outfile}\".")
 
-    #Create the soundlist.
+    # Create the soundlist.
     badsoundlist = []
     p = Path(infolder)
     filelist = list(p.glob('**/*.*'))
@@ -74,25 +79,22 @@ def convert(relfolder):
     for line in filelist:
         newline = line.replace('\\', '/')
         newline = newline.rpartition('/')[2]
-        #newline = newline.replace('\u200f', '') #Is this important?
+        # newline = newline.replace('\u200f', '') # Is this important?
         badsoundlist.append(newline)
     if "crowd.ogg\n" in badsoundlist:
-        badsoundlist.remove("crowd.ogg\n") #F*** crowd noise.
+        badsoundlist.remove("crowd.ogg\n")  # F*** crowd noise.
 
-    #Remove all files that aren't sound files.
+    # Remove all files that aren't sound files.
     soundlist = []
     for item in badsoundlist:
         if item.strip()[-3:] == "ogg" or item.strip()[-3:] == "wav" or item.strip()[-3:] == "mp3":
             soundlist.append(item.strip())
 
-    #How many items are in the list?
+    # How many items are in the list?
     howmany = len(soundlist)
     howmany = str(howmany)
 
-    #Make a config parser.
-    config = configparser.ConfigParser()
-
-    #Get metadata from .ini.
+    # Get metadata from .ini.
     ini = f"{infolder}\\song.ini"
 
     title = iniparse(ini, "name", "Unknown Title")
@@ -103,27 +105,27 @@ def convert(relfolder):
     publisher = iniparse(ini, "charter", "Unknown Charter")
     composer = iniparse(ini, "charter", "Unknown Charter")
 
-    #print(f"""title = {title}
-#author = {author}
-#album_artist = {album_artist}
-#year = {year}
-#genre = {genre}
-#comment = {comment}
-#composer = {composer}""")
+    # print(f"""title = {title}
+    # author = {author}
+    # album_artist = {album_artist}
+    # year = {year}
+    # genre = {genre}
+    # comment = {comment}
+    # composer = {composer}""")
 
-    #Create the commands.
-    command = "ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet" #Execute ffmpeg.
+    # Create the commands.
+    command = "ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet"  # Execute ffmpeg.
     for soundfile in soundlist:
-        command += f" -i \"{infolder}\\{soundfile}\"" #Add all the sound files as inputs.
-    command += f" -filter_complex \"amix=inputs={howmany}\"" #Mix it all together and you know that it's the best of {howmany} worlds!
-    command += f" \"{badoutfile}\"" #Output the mixed recording to the output file.
+        command += f" -i \"{infolder}\\{soundfile}\""  # Add all the sound files as inputs.
+    command += f" -filter_complex \"amix=inputs={howmany}\""  # Mix it all together and you know that it's the best of {howmany} worlds!
+    command += f" \"{badoutfile}\""  # Output the mixed recording to the output file.
 
-    command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\"" #But the output file needs to be filtered again...
+    command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\""  # But the output file needs to be filtered again...
     command2 += f" -i {albumart}"
-    command2 += " -c:a copy -c:v copy -map 0:0 -map 1:0" #Map the inputs.
-    command2 += f" -filter_complex volume={howmany}.0" #...because the result is 1/{howmany}th the volume it should be.
-    command2 += "-id3v2_version 3 -write_id3v1 1" #Set metadata version.
-    command2 += f" -metadata title=\"{title}\"" #Assign metadata tags.
+    command2 += " -c:a copy -c:v copy -map 0:0 -map 1:0"  # Map the inputs.
+    command2 += f" -filter_complex volume={howmany}.0"  # ...because the result is 1/{howmany}th the volume it should be.
+    command2 += "-id3v2_version 3 -write_id3v1 1"  # Set metadata version.
+    command2 += f" -metadata title=\"{title}\""  # Assign metadata tags.
     command2 += f" -metadata author=\"{author}\""
     command2 += f" -metadata artist=\"{author}\""
     command2 += f" -metadata album_artist=\"{album_artist}\""
@@ -132,19 +134,21 @@ def convert(relfolder):
     command2 += f" -metadata genre=\"{genre}\""
     command2 += f" -metadata publisher=\"{publisher}\""
     command2 += f" -metadata composer=\"{composer}\""
-    command2 += " -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\"" #Set the album art.
-    command2 += f" \"{outfile}\"" #Replace the old output with the new, louder, tagged one.
+    command2 += " -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\""  # Set the album art.
+    command2 += f" \"{outfile}\""  # Replace the old output with the new, louder, tagged one.
 
-    #Execute the command.
-    #print(command)
+    # Execute the command.
+    # print(command)
     subprocess.run(command)
     print(command2)
     subprocess.run(command2)
 
-    #Delete the bad file.
-    if os.path.exists(badoutfile): os.remove(badoutfile) #Get rid of the quiet version of the output.
+    # Delete the bad file.
+    if os.path.exists(badoutfile):
+        os.remove(badoutfile)  # Get rid of the quiet version of the output.
 
-#Make the users client-side song list.
+
+# Make the users client-side song list.
 def makeFileList():
     printlist = []
     CHlist = []
@@ -160,10 +164,11 @@ def makeFileList():
         f.writelines(printlist)
     return CHlist
 
-#Let's try this:
-#Check each folder in the folder list.
-#If it has a folder in it self, it's not a dead end so don't add it to the list.
-#Otherwise do.
+
+# Let's try this:
+# Check each folder in the folder list.
+# If it has a folder in it self, it's not a dead end so don't add it to the list.
+# Otherwise do.
 def getdeadends(CHlist):
     printdeadends = []
     deadends = []
@@ -175,7 +180,8 @@ def getdeadends(CHlist):
             if item.is_dir():
                 deadendbool = False
                 break
-        if deadendbool == True: deadends.append(folder)
+        if deadendbool is True:
+            deadends.append(folder)
     deadends.remove("Game Icons (Dont Put In Songs)")
     deadends.remove("Highways (Dont Put In Songs)")
     for line in deadends:
@@ -185,17 +191,18 @@ def getdeadends(CHlist):
     return deadends
 
 
-#Make the folders for the files if they aren't there, since open() can't make subfolders.
+# Make the folders for the files if they aren't there, since open() can't make subfolders.
 def makeFolderStruct():
     for folder in CHlist:
         folder = os.path.split(folder)[0]
         try:
             os.makedirs(os.path.join(destfolder, folder))
         except FileExistsError:
-            #Folder's already there. Don't gotta make it again.
+            # Folder's already there. Don't gotta make it again.
             pass
 
-#Main code.
+
+# Main code.
 CHfolder, destfolder = choosepaths()
 df.msg("Making file list...")
 CHlist = makeFileList()
