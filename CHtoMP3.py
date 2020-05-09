@@ -20,7 +20,7 @@ def iniparse(ini, key, default):
             search = re.search(regex, line)
             if search:
                 returnstring = search.group(2)
-                df.warn(f"Found {key}: \"{returnstring}\"")
+                # df.warn(f"Found {key}: \"{returnstring}\"")
                 return returnstring
 
     return returnstring
@@ -114,6 +114,8 @@ def convert(relfolder):
     # comment = {comment}
     # composer = {composer}""")
 
+    df.msg(f"Converting {title} by {author} [{publisher}]")
+
     # Create the commands.
     command = "ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet"  # Execute ffmpeg.
     for soundfile in soundlist:
@@ -123,9 +125,9 @@ def convert(relfolder):
 
     command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\""  # But the output file needs to be filtered again...
     command2 += f" -i \"{albumart}\""
-    command2 += " -c:a copy -c:v copy -map 0:0 -map 1:0"  # (Map the inputs.)
+    command2 += f" -map 0:0 -map 1:0"  # (Map the inputs.)
     command2 += f" -filter_complex volume={howmany}.0"  # ...because the result is 1/{howmany}th the volume it should be.
-    command2 += "-id3v2_version 3 -write_id3v1 1"  # Set metadata version.
+    command2 += f" -id3v2_version 3 -write_id3v1 1"  # Set metadata version.
     command2 += f" -metadata title=\"{title}\""  # Assign metadata tags.
     command2 += f" -metadata author=\"{author}\""
     command2 += f" -metadata artist=\"{author}\""
@@ -135,13 +137,13 @@ def convert(relfolder):
     command2 += f" -metadata genre=\"{genre}\""
     command2 += f" -metadata publisher=\"{publisher}\""
     command2 += f" -metadata composer=\"{composer}\""
-    command2 += " -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\""  # Set the album art.
+    command2 += f" -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\""  # Set the album art.
     command2 += f" \"{outfile}\""  # Replace the old output with the new, louder, tagged one.
 
     # Execute the command.
     # print(command)
     subprocess.run(command)
-    print(command2)
+    # print(command2)
     subprocess.run(command2)
 
     # Delete the bad file.
