@@ -15,9 +15,7 @@ def iniparse(ini, key, default):
     returnstring = default
     file = open(ini, 'r')
     lines = file.readlines()
-    print(lines)
     for line in lines:
-        print(line.strip())
         if line.startswith(key):
             search = re.search(regex, line)
             if search:
@@ -44,10 +42,10 @@ def choosepaths():
     CHfolder = CHfolder.replace("/", "\\")
     destfolder = input("Please type the full path of your output directory.\n>")
     destfolder = destfolder.replace("/", "\\")
-    if CHfolder == "test":
+    if CHfolder == "":
         CHfolder = "F:\\chs"
-    if destfolder == "test":
-        destfolder = "F:\\CHtoMP3 Songs"
+    if destfolder == "":
+        destfolder = "F:\\ch2mp3"
     confirm = input(f"Input folder: {CHfolder}\nOutput folder: {destfolder}\nAre you sure about this? Type \"Y\" or \"N\".\n>")
     if confirm.lower() == 'y':
         CHfolder = Path(CHfolder)
@@ -97,6 +95,9 @@ def convert(relfolder):
     # Get metadata from .ini.
     ini = f"{infolder}\\song.ini"
 
+    # with open(ini) as file:
+    #     print(file.read())
+
     title = iniparse(ini, "name", "Unknown Title")
     author = album_artist = iniparse(ini, "artist", "Unknown Artist")
     album = iniparse(ini, "album", "Unknown Album")
@@ -121,8 +122,8 @@ def convert(relfolder):
     command += f" \"{badoutfile}\""  # Output the mixed recording to the output file.
 
     command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\""  # But the output file needs to be filtered again...
-    command2 += f" -i {albumart}"
-    command2 += " -c:a copy -c:v copy -map 0:0 -map 1:0"  # Map the inputs.
+    command2 += f" -i \"{albumart}\""
+    command2 += " -c:a copy -c:v copy -map 0:0 -map 1:0"  # (Map the inputs.)
     command2 += f" -filter_complex volume={howmany}.0"  # ...because the result is 1/{howmany}th the volume it should be.
     command2 += "-id3v2_version 3 -write_id3v1 1"  # Set metadata version.
     command2 += f" -metadata title=\"{title}\""  # Assign metadata tags.
