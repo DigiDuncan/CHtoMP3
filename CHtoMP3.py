@@ -1,4 +1,5 @@
 # Imports
+import chardet
 import os
 import re
 import subprocess
@@ -14,7 +15,12 @@ herepath = os.path.dirname(os.path.abspath(__file__))
 def iniparse(ini, key, default=None):
     regex = re.compile(r"^([^\s=]+)\s*=\s*(.+)$")
     tag_regex = re.compile(r"<[^>]*>")
-    with open(ini, "r", encoding = "utf=8") as f:
+
+    with open(ini, "rb") as f:
+        input_bytes = f.read()
+        encoding = chardet.detect(input_bytes)["encoding"]
+
+    with open(ini, "r", encoding = encoding) as f:
         for line in f:
             match = regex.match(line.strip())
             if not match:
