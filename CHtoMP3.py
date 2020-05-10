@@ -102,8 +102,9 @@ def convert(relfolder):
     # Get metadata from .ini.
     ini = f"{infolder}\\song.ini"
 
-    # with open(ini) as file:
-    #     print(file.read())
+    if not os.path.isfile(ini):
+        df.warn(f"Error loading {infolder}, no ini.")
+        return
 
     title = iniparse(ini, "name", "Unknown Title")
     author = album_artist = iniparse(ini, "artist", "Unknown Artist")
@@ -112,14 +113,6 @@ def convert(relfolder):
     genre = iniparse(ini, "genre", "Unknown Genre")
     publisher = iniparse(ini, "charter", "Unknown Charter")
     composer = iniparse(ini, "charter", "Unknown Charter")
-
-    # print(f"""title = {title}
-    # author = {author}
-    # album_artist = {album_artist}
-    # year = {year}
-    # genre = {genre}
-    # comment = {comment}
-    # composer = {composer}""")
 
     df.msg(f"Converting {title} by {author} [{publisher}]")
 
