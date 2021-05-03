@@ -6,6 +6,8 @@ import subprocess
 from pathlib import Path
 from unidecode import unidecode
 
+from tqdm import tqdm
+
 import digiformatter as df
 
 # Constants
@@ -16,21 +18,28 @@ def iniparse(ini, key, default=None):
     regex = re.compile(r"^([^\s=]+)\s*=\s*(.+)$")
     tag_regex = re.compile(r"<[^>]*>")
 
-    with open(ini, "rb") as f:
-        input_bytes = f.read()
-        encoding = chardet.detect(input_bytes)["encoding"]
+    encoding = "utf_8"
 
-    with open(ini, "r", encoding = encoding) as f:
-        for line in f:
-            match = regex.match(line.strip())
-            if not match:
-                continue
-            linekey, value = match.groups()
-            if key != linekey:
-                continue
-            value = tag_regex.sub("", value)
-            return unidecode(value)
-    return default
+    def parse():
+        with open(ini, "r", encoding = encoding) as f:
+            for line in f:
+                match = regex.match(line.strip())
+                if not match:
+                    continue
+                linekey, value = match.groups()
+                if key != linekey:
+                    continue
+                value = tag_regex.sub("", value)
+                return unidecode(value, errors = 'replace').strip()
+        return default
+
+    try:
+        return parse()
+    except UnicodeDecodeError:
+        with open(ini, "rb") as f:
+            input_bytes = f.read()
+            encoding = chardet.detect(input_bytes)["encoding"]
+        return parse()
 
 
 # Remove prefix function.
@@ -52,7 +61,7 @@ def choosepaths():
     if CHfolder == "":
         CHfolder = "F:\\chs"
     if destfolder == "":
-        destfolder = "F:\\ch2mp3"
+        destfolder = "F:\\chtomp3"
     confirm = input(f"Input folder: {CHfolder}\nOutput folder: {destfolder}\nAre you sure about this? Type \"Y\" or \"N\".\n>")
     if confirm.lower() == 'y':
         CHfolder = Path(CHfolder)
@@ -65,13 +74,26 @@ def choosepaths():
 def convert(relfolder):
     # Setup in and out destinations.
     infolder = os.path.join(CHfolder, relfolder)
+    albumartexists = True
     albumart = os.path.join(infolder, "album.png")
+    if not os.path.exists(albumart):
+        albumart = os.path.join(infolder, "album.jpg")
+    if not os.path.exists(albumart):
+        albumartexists = False
     outfolder = os.path.join(destfolder, relfolder)
     outfolder = os.path.split(outfolder)[0]  # Go one folder up.
 
     # Name the outfile.
     outfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + ".mp3"))
     badoutfile = os.path.join(outfolder, Path(infolder.rpartition('\\')[2] + "BAD.mp3"))
+
+    # Check to see if we already coverted this one.
+    if os.path.exists(outfile):
+        # df.warn(f"Already converted! ({outfile})" + df.CURSOR_UP + df.CURSOR_HOME)
+        # Delete the bad file.
+        if os.path.exists(badoutfile):
+            os.remove(badoutfile)  # Get rid of the quiet version of the output.
+        return
 
     # Temp output.
     # df.msg(f"Converting \"{infolder}\" to \"{outfile}\".")
@@ -103,7 +125,10 @@ def convert(relfolder):
     ini = f"{infolder}\\song.ini"
 
     if not os.path.isfile(ini):
-        df.warn(f"Error loading {infolder}, no ini.")
+        # df.warn(f"Error loading {infolder}, no ini.")
+        # Delete the bad file.
+        if os.path.exists(badoutfile):
+            os.remove(badoutfile)  # Get rid of the quiet version of the output.
         return
 
     title = iniparse(ini, "name", "Unknown Title")
@@ -114,20 +139,22 @@ def convert(relfolder):
     publisher = iniparse(ini, "charter", "Unknown Charter")
     composer = iniparse(ini, "charter", "Unknown Charter")
 
-    df.msg(f"Converting {title} by {author} [{publisher}]")
+    # df.msg(f"Converting {title} by {author} [{publisher}]")
+    # print(str(outfile)[:80] + ("..." if len(str(outfile)) > 80 else ""))
 
     # Create the commands.
-    command = "ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet"  # Execute ffmpeg.
+    command = "ffmpeg/bin/ffmpeg.exe -y -hide_banner -loglevel quiet"  # Execute ffmpeg.
     for soundfile in soundlist:
         command += f" -i \"{infolder}\\{soundfile}\""  # Add all the sound files as inputs.
     command += f" -filter_complex \"amix=inputs={howmany}\""  # Mix it all together and you know that it's the best of {howmany} worlds!
     command += f" \"{badoutfile}\""  # Output the mixed recording to the output file.
 
-    command2 = f"ffmpeg/bin/ffmpeg.exe -hide_banner -loglevel quiet -i \"{badoutfile}\""  # But the output file needs to be filtered again...
-    command2 += f" -i \"{albumart}\""
-    command2 += f" -map 0:0 -map 1:0"  # (Map the inputs.)
+    command2 = f"ffmpeg/bin/ffmpeg.exe -y -hide_banner -loglevel quiet -i \"{badoutfile}\""  # But the output file needs to be filtered again...
+    if albumartexists:
+        command2 += f" -i \"{albumart}\""
+        command2 += " -map 0:0 -map 1:0"  # (Map the inputs.)
     command2 += f" -filter_complex volume={howmany}.0"  # ...because the result is 1/{howmany}th the volume it should be.
-    command2 += f" -id3v2_version 3 -write_id3v1 1"  # Set metadata version.
+    command2 += " -id3v2_version 3 -write_id3v1 1"  # Set metadata version.
     command2 += f" -metadata title=\"{title}\""  # Assign metadata tags.
     command2 += f" -metadata author=\"{author}\""
     command2 += f" -metadata artist=\"{author}\""
@@ -137,14 +164,23 @@ def convert(relfolder):
     command2 += f" -metadata genre=\"{genre}\""
     command2 += f" -metadata publisher=\"{publisher}\""
     command2 += f" -metadata composer=\"{composer}\""
-    command2 += f" -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\""  # Set the album art.
+    if albumartexists:
+        command2 += " -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\""  # Set the album art.
     command2 += f" \"{outfile}\""  # Replace the old output with the new, louder, tagged one.
 
     # Execute the command.
     # print(command)
-    subprocess.run(command)
+    try:
+        subprocess.run(command, text = True, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, check = True)
+    except subprocess.CalledProcessError as e:
+        # df.crit(f"{title} by {author} [{publisher}]: Step 1: Code {e.returncode}, {e.output}")
+        pass
     # print(command2)
-    subprocess.run(command2)
+    try:
+        subprocess.run(command2, text = True, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, check = True)
+    except subprocess.CalledProcessError as e:
+        # df.crit(f"{title} by {author} [{publisher}]: Step 2: Code {e.returncode}, {e.output}")
+        pass
 
     # Delete the bad file.
     if os.path.exists(badoutfile):
@@ -210,5 +246,6 @@ CHlist = makeFileList()
 df.msg("Making folders...")
 makeFolderStruct()
 print("Begin conversion.")
-for item in getdeadends(CHlist):
+for item in tqdm(getdeadends(CHlist)):
+    tqdm.write(item)
     convert(item)
